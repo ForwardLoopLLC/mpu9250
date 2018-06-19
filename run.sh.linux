@@ -1,0 +1,6 @@
+#!/bin/bash
+mkdir -p /drivers/i2c/
+mkdir -p /drivers/mpu9250/
+cp /floop/include/i2c/linux/*.h /drivers/i2c/
+cp /floop/mpu9250/*.h /drivers/mpu9250/
+g++ /floop/example/main.cpp -I/drivers -o /floop/mpu9250/mpu9250 && /floop/mpu9250/mpu9250

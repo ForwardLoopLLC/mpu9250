@@ -1,0 +1,3 @@
+[submodule "include/i2c"]
+	path = include/i2c
+	url = git@github.com:nickfloop/i2c.git
