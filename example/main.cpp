@@ -1,4 +1,12 @@
 #include "mpu9250/mpu9250.h"
+#include <sys/time.h>
+
+double now() {
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    return (double)ms/1000000.0;
+}
 
 int main() {
     MPU9250 mpu9250(0);
@@ -51,31 +59,50 @@ int main() {
         printf("ERROR: failed to set magnetometer rate\n");
     }
     mpu9250.wait(1000000);
-    double acceleration[3];
-    double rotationRate[3];
-    double magneticField[3];
-    for (int i=0; i<5; i++) {
+    double acceleration[3] = {0.0};
+    double rotationRate[3] = {0.0};
+    double magneticField[3] = {0.0};
+    double quaternion[4] = {1.0, 0.0, 0.0, 0.0};
+    double lastUpdate = 0.0;
+    int sample = 0;
+    int subsamples = 0;
+    while(true) {
         if(mpu9250.dataReady()) {
+            printf("Subsamples: %d\n", subsamples);
+            subsamples = 0;
+            printf("Quaternion\n");
+            for (int j=0; j<4; j++) {
+                printf("%f ", quaternion[j]);
+            }
+            printf("\n");
             mpu9250.readAcceleration(acceleration);
             mpu9250.readRotationRate(rotationRate);
             mpu9250.readMagneticField(magneticField);
-            mpu9250.wait(1000000);
-            printf("Acceleration\n");
-            for (int j=0; j<3; j++) {
-                printf("%f ", acceleration[j]);
+            sample++;
+            if (sample > 50) {
+                break;
             }
-            printf("\n");
-            printf("Rotation Rate\n");
-            for (int j=0; j<3; j++) {
-                printf("%f ", rotationRate[j]);
-            }
-            printf("\n");
-            printf("Magnetic Field\n");
-            for (int j=0; j<3; j++) {
-                printf("%f ", magneticField[j]);
-            }
-            printf("\n");
         }
+        double deltat = now() - lastUpdate;
+        lastUpdate = now();
+        MadgwickQuaternionUpdate(quaternion, acceleration, rotationRate, magneticField, deltat);
+        subsamples++;
+        //mpu9250.wait(1000000);
+        //printf("Acceleration\n");
+        //for (int j=0; j<3; j++) {
+        //    printf("%f ", acceleration[j]);
+        //}
+        //printf("\n");
+        //printf("Rotation Rate\n");
+        //for (int j=0; j<3; j++) {
+        //    printf("%f ", rotationRate[j]);
+        //}
+        //printf("\n");
+        //printf("Magnetic Field\n");
+        //for (int j=0; j<3; j++) {
+        //    printf("%f ", magneticField[j]);
+        //}
+        //printf("\n");
     }
     return 0;
 }
