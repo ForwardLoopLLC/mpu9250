@@ -1,5 +1,6 @@
 #ifndef MPU9250_H
 #define MPU9250_H
+#include <math.h>
 #include "i2c/i2c.h"
 #define MPU9250_I2CADDR 0x68
 #define AK8963_I2CADDR 0x0C
@@ -9,6 +10,7 @@
 ////// (6 sequential 8-bit registers 
 ////// to be read as 3 signed 16-bit sequential registers)
 #define MPU9250_ACCEL_XOUT_H 0x3B
+#define MPU9250_GYRO_XOUT_H 0x43
 // Power Management 1
 #define MPU9250_PWR_MGMT_1 0x6B
 //// Power management 1 modes
@@ -66,8 +68,10 @@ enum class MPU9250_INT_PIN_CFG_MODE {
 enum class MPU9250_INT_ENABLE_MODE {
     ENABLED = 0x01
 };
+#define MPU9250_INT_STATUS 0x3A
 
 #define AK8963_WHO_AM_I 0x00 
+#define AK8963_XOUT_L 0x03
 #define AK8963_CNTL 0x0A
 enum class AK8963_CNTL_MODE {
     POWER_DOWN = 0x00,
@@ -105,17 +109,25 @@ class MPU9250 {
         bool enableMagnetometer();
         bool becomeSlave();
         bool enableDataReady();
+        bool dataReady();
         bool magnetometerSensitivity(double sensitivity[3]);
         bool setMagnetometerScale14Bits();
         bool setMagnetometerSampleRate100Hz();
+        bool readAcceleration(double acceleration[3]);
+        bool readRotationRate(double rotationRate[3]);
+        bool readMagneticField(double magneticField[3]);
     private:
         I2C mpu9250I2C;
         I2C* ak8963I2C;
         const uint8_t bus;
         bool err = false;
         bool magnetometerEnabled = false;
+        double accelerometerResolution = 0.0;
+        double gyroscopeResolution = 0.0;
+        double magnetometerResolution = 0.0;
         bool checkMagnetometer();
-        bool read_bytes(const uint8_t reg, const uint8_t len, uint8_t* bytes);
+        bool readAccelerometerGyroscopeBytes(const uint8_t reg, const uint8_t len, uint8_t* bytes);
+        bool readMagnetometerBytes(const uint8_t reg, const uint8_t len, uint8_t* bytes);
         bool setGyroscopeScale(const uint8_t scale);
         bool setAccelerometerScale(const uint8_t scale);
         bool setAccelerometerBandwidth(const uint8_t bandwidth);
@@ -144,9 +156,16 @@ bool MPU9250::error() {
     return err;
 }
 
-bool MPU9250::read_bytes(const uint8_t reg, const uint8_t len, uint8_t* bytes) {
+bool MPU9250::readAccelerometerGyroscopeBytes(const uint8_t reg, const uint8_t len, uint8_t* bytes) {
     for(int i=0; i < len; i++) {
         bytes[i] = mpu9250I2C.read_byte(reg + i); 
+    }
+    return true;
+}
+
+bool MPU9250::readMagnetometerBytes(const uint8_t reg, const uint8_t len, uint8_t* bytes) {
+    for(int i=0; i < len; i++) {
+        bytes[i] = ak8963I2C->read_byte(reg + i); 
     }
     return true;
 }
@@ -155,6 +174,7 @@ bool MPU9250::reset() {
     if(!mpu9250I2C.write_byte(MPU9250_PWR_MGMT_1, (uint8_t)MPU9250_PWR_MGMT_1_MODE::RESET)) {
         return false;
     }
+    wait(10000);
     return true;
 }
 
@@ -162,6 +182,7 @@ bool MPU9250::disableSleepMode() {
     if(!mpu9250I2C.write_byte(MPU9250_PWR_MGMT_1, (uint8_t)MPU9250_PWR_MGMT_1_MODE::DISABLE_SLEEP)) {
         return false;
     }
+    wait(10000);
     return true;
 }
 
@@ -210,6 +231,8 @@ bool MPU9250::setGyroscopeScale(const uint8_t scale) {
     if(!mpu9250I2C.write_byte(MPU9250_GYRO_CONFIG, gyroConfig)) {
         return false;
     }
+    gyroscopeResolution = 250.0*(scale+1)/32768.0;
+    printf("Gyro res: %f\n", gyroscopeResolution);
     return true;
 } 
 
@@ -238,6 +261,7 @@ bool MPU9250::setAccelerometerScale(const uint8_t scale) {
     if(!mpu9250I2C.write_byte(MPU9250_ACCEL_CONFIG, accelConfig)) {
         return false;
     }
+    accelerometerResolution = pow(2, scale+1)/32768.0;
     return true;
 }
 
@@ -294,6 +318,10 @@ bool MPU9250::enableDataReady() {
     return true;
 }
 
+bool MPU9250::dataReady() {
+    return mpu9250I2C.read_byte(MPU9250_INT_STATUS) & 0x01;
+}
+
 bool MPU9250::enableMagnetometer() {
     if(!enableI2CBypass()) {
         return false;
@@ -322,7 +350,7 @@ bool MPU9250::magnetometerSensitivity(double sensitivity[3]) {
     }
     wait(10);
     uint8_t sensitivityBuffer[3];
-    read_bytes(AK8963_ASAX, 3, sensitivityBuffer);
+    readAccelerometerGyroscopeBytes(AK8963_ASAX, 3, sensitivityBuffer);
     for (int i=0; i<3; i++){
         sensitivity[i] = (double)(sensitivityBuffer[i] - 128)/256.0 + 1.0;
     }
@@ -344,6 +372,10 @@ bool MPU9250::setMagnetometerScale(const uint8_t scale) {
         printf("c\n");
         return false;
     }
+    magnetometerResolution = 49120.0/8190.0;
+	if (scale) {
+		magnetometerResolution = 49120.0/32760.0;
+	}
     return true;
 }
 
@@ -370,6 +402,33 @@ bool MPU9250::setMagnetometerSampleRate100Hz() {
 
 bool MPU9250::checkMagnetometer() {
     return ak8963I2C->read_byte(AK8963_WHO_AM_I) == 0x48;
+}
+
+bool MPU9250::readAcceleration(double acceleration[3]) {
+    uint8_t accelData[6];
+    readAccelerometerGyroscopeBytes(MPU9250_ACCEL_XOUT_H, 6, accelData);
+    for (int i=0; i<3; i++) {
+        acceleration[i] = accelerometerResolution * (double)(int16_t)(((int16_t)accelData[2*i] << 8) | accelData[2*i+1]);
+    }
+    return true;
+}
+
+bool MPU9250::readRotationRate(double rotationRate[3]) {
+    uint8_t gyroData[6];
+    readAccelerometerGyroscopeBytes(MPU9250_GYRO_XOUT_H, 6, gyroData);
+    for (int i=0; i<3; i++) {
+        rotationRate[i] = gyroscopeResolution * (double)(int16_t)((int16_t)gyroData[2*i] << 8 | gyroData[2*i+1]);
+    }
+    return true;
+}
+
+bool MPU9250::readMagneticField(double magneticField[3]) {
+    uint8_t magData[6];
+    readMagnetometerBytes(AK8963_XOUT_L, 6, magData);
+    for (int i=0; i<3; i++) {
+        magneticField[i] = magnetometerResolution * (double)(int16_t)((int16_t)magData[2*i+1] << 8 | magData[2*i]);
+    }
+    return true;
 }
 
 #endif
