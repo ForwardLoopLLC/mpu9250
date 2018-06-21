@@ -31,7 +31,10 @@ enum class MPU9250_CONFIG_MODE {
 };
 #define MPU9250_SMPLRT_DIV 0x19
 enum class MPU9250_SMPLRT_DIV_MODE {
-    _200HZ = 0x03
+    _200HZ = 0x04,
+    _100HZ = 0x09,
+    _50HZ = 0x31,
+	_10HZ = 0x63
 };
 #define MPU9250_GYRO_CONFIG 0x1B
 enum class MPU9250_GYRO_CONFIG_MODE {
@@ -56,7 +59,7 @@ enum class MPU9250_ACCEL_CONFIG2_MODE {
 
 #define MPU9250_I2C_MST_CTRL 0x24
 enum class MPU9250_I2C_MST_CTRL_MODE {
-    SLAVE = 0x00
+    SLAVE = 0x00 //400kHz clock frequency
 }; 
 
 #define MPU9250_INT_PIN_CFG 0x37
@@ -69,6 +72,10 @@ enum class MPU9250_INT_ENABLE_MODE {
     ENABLED = 0x01
 };
 #define MPU9250_INT_STATUS 0x3A
+#define MPU9250_USER_CTRL 0x6A
+enum class MPU9250_USER_CTRL_MODE {
+	DISABLE_MASTER = 0x00
+};
 
 #define AK8963_WHO_AM_I 0x00 
 #define AK8963_ST1 0x02
@@ -97,6 +104,9 @@ class MPU9250 {
         bool useInternalClock();
         bool useBestClock();
         bool setGyroscopeLowPassFilterFrequency200Hz();
+        bool setAccelerometerGyroscopeSampleFrequency10Hz();
+        bool setAccelerometerGyroscopeSampleFrequency50Hz();
+        bool setAccelerometerGyroscopeSampleFrequency100Hz();
         bool setAccelerometerGyroscopeSampleFrequency200Hz();
         bool setGyroscopeScale250DPS();
         bool setGyroscopeScale500DPS();
@@ -111,12 +121,14 @@ class MPU9250 {
         bool becomeSlave();
         bool enableDataReady();
         bool dataReady();
+        bool testReadWord();
         bool magnetometerReady();
         bool magnetometerSensitivity(double sensitivity[3]);
         bool setMagnetometerScale14Bits();
         bool setMagnetometerSampleRate100Hz();
         bool readAcceleration(double acceleration[3]);
         bool readRotationRate(double rotationRate[3]);
+		bool readAccelerationAndRotationRate(double acceleration[3], double rotationRate[3]);
         bool readMagneticField(double magneticField[3]);
     private:
         I2C mpu9250I2C;
@@ -159,17 +171,11 @@ bool MPU9250::error() {
 }
 
 bool MPU9250::readAccelerometerGyroscopeBytes(const uint8_t reg, const uint8_t len, uint8_t* bytes) {
-    for(int i=0; i < len; i++) {
-        bytes[i] = mpu9250I2C.read_byte(reg + i); 
-    }
-    return true;
+	return mpu9250I2C.read_block(reg, len, bytes);
 }
 
 bool MPU9250::readMagnetometerBytes(const uint8_t reg, const uint8_t len, uint8_t* bytes) {
-    for(int i=0; i < len; i++) {
-        bytes[i] = ak8963I2C->read_byte(reg + i); 
-    }
-    return true;
+	return ak8963I2C->read_block(reg, len, bytes);
 }
 
 bool MPU9250::reset() {
@@ -217,6 +223,27 @@ bool MPU9250::setGyroscopeLowPassFilterFrequency200Hz() {
 
 bool MPU9250::setAccelerometerGyroscopeSampleFrequency200Hz() {
     if(!mpu9250I2C.write_byte(MPU9250_SMPLRT_DIV, (uint8_t)MPU9250_SMPLRT_DIV_MODE::_200HZ)) {
+        return false;
+    }
+    return true;
+}
+
+bool MPU9250::setAccelerometerGyroscopeSampleFrequency100Hz() {
+    if(!mpu9250I2C.write_byte(MPU9250_SMPLRT_DIV, (uint8_t)MPU9250_SMPLRT_DIV_MODE::_100HZ)) {
+        return false;
+    }
+    return true;
+}
+
+bool MPU9250::setAccelerometerGyroscopeSampleFrequency50Hz() {
+    if(!mpu9250I2C.write_byte(MPU9250_SMPLRT_DIV, (uint8_t)MPU9250_SMPLRT_DIV_MODE::_50HZ)) {
+        return false;
+    }
+    return true;
+}
+
+bool MPU9250::setAccelerometerGyroscopeSampleFrequency10Hz() {
+    if(!mpu9250I2C.write_byte(MPU9250_SMPLRT_DIV, (uint8_t)MPU9250_SMPLRT_DIV_MODE::_10HZ)) {
         return false;
     }
     return true;
@@ -310,6 +337,9 @@ bool MPU9250::becomeSlave() {
     if(!mpu9250I2C.write_byte(MPU9250_I2C_MST_CTRL, (uint8_t)MPU9250_I2C_MST_CTRL_MODE::SLAVE)) {
         return false;
     }
+    if(!mpu9250I2C.write_byte(MPU9250_USER_CTRL, (uint8_t)MPU9250_USER_CTRL_MODE::DISABLE_MASTER)) {
+        return false;
+    }
     return true;
 }
 
@@ -322,6 +352,12 @@ bool MPU9250::enableDataReady() {
 
 bool MPU9250::dataReady() {
     return mpu9250I2C.read_byte(MPU9250_INT_STATUS) & 0x01;
+}
+
+bool MPU9250::testReadWord() {
+	uint8_t tmp[14];
+	mpu9250I2C.read_block(MPU9250_ACCEL_XOUT_H, 14, tmp);
+    return true; 
 }
 
 bool MPU9250::enableMagnetometer() {
@@ -371,7 +407,6 @@ bool MPU9250::setMagnetometerScale(const uint8_t scale) {
     magConfig &= 0xF0;
     magConfig |= scale << 4;
     if(!ak8963I2C->write_byte(AK8963_CNTL, magConfig)) {
-        printf("c\n");
         return false;
     }
     magnetometerResolution = 49120.0/8190.0;
@@ -422,6 +457,18 @@ bool MPU9250::readRotationRate(double rotationRate[3]) {
         rotationRate[i] = gyroscopeResolution * (double)(int16_t)((int16_t)gyroData[2*i] << 8 | gyroData[2*i+1]);
     }
     return true;
+}
+
+bool MPU9250::readAccelerationAndRotationRate(double acceleration[3], double rotationRate[3]) {
+	uint8_t data[14];
+    readAccelerometerGyroscopeBytes(MPU9250_ACCEL_XOUT_H, 14, data);
+    for (int i=0; i<3; i++) {
+        acceleration[i] = accelerometerResolution * (double)(int16_t)(((int16_t)data[2*i] << 8) | data[2*i+1]);
+    }
+    for (int i=0; i<3; i++) {
+        rotationRate[i] = gyroscopeResolution * (double)(int16_t)(((int16_t)data[2*i+6] << 8) | data[2*i+1+6]);
+    }
+	return true;
 }
 
 bool MPU9250::readMagneticField(double magneticField[3]) {

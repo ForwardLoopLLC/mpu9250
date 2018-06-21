@@ -4,8 +4,8 @@
 double now() {
     struct timeval tp;
     gettimeofday(&tp, NULL);
-    long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
-    return (double)ms/1000000.0;
+    double ms = tp.tv_sec + tp.tv_usec/1000000.0;
+    return ms;
 }
 
 int main() {
@@ -17,6 +17,9 @@ int main() {
     if(!mpu9250.reset()) {
         printf("ERROR: reset failed\n");
     }
+    if(!mpu9250.becomeSlave()) {
+        printf("ERROR: failed to become slave device\n");
+    }
     if(!mpu9250.disableSleepMode()) {
         printf("ERROR: failed to disable sleep mode\n");
     }
@@ -26,13 +29,13 @@ int main() {
     if(!mpu9250.setGyroscopeLowPassFilterFrequency200Hz()) {
         printf("ERROR: failed to set gyroscope low pass filter frequency\n");
     }
-    if(!mpu9250.setAccelerometerGyroscopeSampleFrequency200Hz()) {
+    if(!mpu9250.setAccelerometerGyroscopeSampleFrequency10Hz()) {
         printf("ERROR: failed to set accelerometer and gyroscope sample frequency\n");
     }
-    if(!mpu9250.setGyroscopeScale2000DPS()) {
+    if(!mpu9250.setGyroscopeScale250DPS()) {
         printf("ERROR: failed to set gyroscope scale\n");
     }
-    if(!mpu9250.setAccelerometerScale16G()) {
+    if(!mpu9250.setAccelerometerScale2G()) {
         printf("ERROR: failed to set accelerometer scale\n");
     }
     if(!mpu9250.setAccelerometerBandwidth45Hz()) {
@@ -58,7 +61,6 @@ int main() {
     if(!mpu9250.setMagnetometerSampleRate100Hz()) {
         printf("ERROR: failed to set magnetometer rate\n");
     }
-    mpu9250.wait(1000000);
     double acceleration[3] = {0.0};
     double rotationRate[3] = {0.0};
     double magneticField[3] = {0.0};
@@ -66,27 +68,62 @@ int main() {
     double lastUpdate = 0.0;
     int sample = 0;
     int subsamples = 0;
+    double t0 = now();
     while(true) {
         if(mpu9250.dataReady()) {
-            printf("Subsamples: %d\n", subsamples);
-            subsamples = 0;
-            printf("Quaternion\n");
-            for (int j=0; j<4; j++) {
-                printf("%f ", quaternion[j]);
+            if(sample > 1) {
+                FILE* fid = fopen("/floop/quaternion", "w");
+                if (fid != NULL) {
+                    fprintf(fid,
+                            "%1.6f %1.6f %1.6f %1.6f\n",
+                            quaternion[0],
+                            quaternion[1],
+                            quaternion[2],
+                            quaternion[3]);
+                    fflush(fid);
+                    fclose(fid);
+                }
             }
-            printf("\n");
-            mpu9250.readAcceleration(acceleration);
-            mpu9250.readRotationRate(rotationRate);
+            //printf("Elapsed: %f\n", now() - t0);
+            t0 = now();
+            //printf("Subsamples: %d\n", subsamples);
+            subsamples = 0;
+            //printf("Quaternion\n");
+            //for (int j=0; j<4; j++) {
+            //    printf("%f ", quaternion[j]);
+            //}
+            //printf("\n");
+            //double accTime = now();
+            //mpu9250.readAcceleration(acceleration);
+            mpu9250.readAccelerationAndRotationRate(acceleration, rotationRate);
+            //printf("Read accelerometer takes: %f\n", now() - accTime);
+            //double gyroTime = now();
+            //mpu9250.readRotationRate(rotationRate);
+            //printf("Read gyroscope takes: %f\n", now() - gyroTime);
+            //double magTime = now();
             mpu9250.readMagneticField(magneticField);
+            //printf("Read magnetometer takes: %f\n", now() - magTime);
+            for(int i=0; i<3; i++) {
+                magneticField[i] *= sensitivity[i];
+            }
             sample++;
-            if (sample > 50) {
+            if (sample > 1000) {
                 break;
             }
         }
         double deltat = now() - lastUpdate;
+        //printf("Delta t: %f\n", deltat);
         lastUpdate = now();
-        MadgwickQuaternionUpdate(quaternion, acceleration, rotationRate, magneticField, deltat);
+        //double t0 = now();
+        //for (int i=0; i<50; i++) {
+        if(sample > 1){
+            if(!MadgwickQuaternionUpdate(quaternion, acceleration, rotationRate, magneticField, deltat)) {
+                printf("Madgwick failed!\n");
+            }
         subsamples++;
+        }
+        //}
+        //printf("Madgwick time: %f\n", now() - t0);
         //mpu9250.wait(1000000);
         //printf("Acceleration\n");
         //for (int j=0; j<3; j++) {
@@ -104,5 +141,10 @@ int main() {
         //}
         //printf("\n");
     }
+    printf("Quaternion\n");
+    for (int j=0; j<4; j++) {
+        printf("%f ", quaternion[j]);
+    }
+    printf("\n");
     return 0;
 }
