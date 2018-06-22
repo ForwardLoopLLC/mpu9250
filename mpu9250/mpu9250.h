@@ -88,11 +88,11 @@ enum class AK8963_CNTL_MODE {
     _14BITS = 0x00,
     _16BITS = 0x01,
     // rate bits do not get shifted
+    _8HZ = 0x02,
     _100HZ = 0x06
 };
 #define AK8963_ASAX 0x10
 
-//! test
 class MPU9250 {
     public:
         //! Constructor initializes I2C resources
@@ -575,6 +575,10 @@ bool MPU9250::setMagnetometerScale14Bits() {
     return setMagnetometerScale((uint8_t)AK8963_CNTL_MODE::_14BITS);
 }
 
+bool MPU9250::setMagnetometerScale16Bits() {
+    return setMagnetometerScale((uint8_t)AK8963_CNTL_MODE::_16BITS);
+}
+
 bool MPU9250::setMagnetometerSampleRate(const uint8_t rate) {
     if(!magnetometerEnabled) {
         return false;
@@ -586,6 +590,10 @@ bool MPU9250::setMagnetometerSampleRate(const uint8_t rate) {
         return false;
     }
     return true;
+}
+
+bool MPU9250::setMagnetometerSampleRate8Hz() {
+    return setMagnetometerSampleRate((uint8_t)AK8963_CNTL_MODE::_8HZ);
 }
 
 bool MPU9250::setMagnetometerSampleRate100Hz() {
