@@ -1,4 +1,5 @@
 #include "mpu9250/mpu9250.h"
+#include "mpu9250/quaternion.h"
 #include <sys/time.h>
 
 double now() {
@@ -47,14 +48,10 @@ int main() {
     if(!mpu9250.enableDataReady()) {
         printf("ERROR: failed to enable data ready interrupt\n");
     }
-    double sensitivity[3];
-    if(!mpu9250.magnetometerSensitivity(sensitivity)) {
-         printf("ERROR: failed to read magnetometer sensitivity\n");
+    double magnetometerSensitivity[3];
+    if(!mpu9250.magnetometerSensitivity(magnetometerSensitivity)) {
+         printf("ERROR: failed to read magnetometer magnetometerSensitivity\n");
     }
-    for(int i=0; i<3; i++){
-        printf("%f ", sensitivity[i]);
-    }
-    printf("\n");
     if(!mpu9250.setMagnetometerScale14Bits()) {
         printf("ERROR: failed to set magnetometer scale\n");
     }
@@ -67,15 +64,13 @@ int main() {
     double quaternion[4] = {1.0, 0.0, 0.0, 0.0};
     double lastUpdate = 0.0;
     int sample = 0;
-    int subsamples = 0;
-    double t0 = now();
     while(true) {
         if(mpu9250.dataReady()) {
             if(sample > 1) {
                 FILE* fid = fopen("/floop/quaternion", "w");
                 if (fid != NULL) {
                     fprintf(fid,
-                            "%1.6f %1.6f %1.6f %1.6f\n",
+                            "%1.6f,%1.6f,%1.6f,%1.6f\n",
                             quaternion[0],
                             quaternion[1],
                             quaternion[2],
@@ -84,67 +79,25 @@ int main() {
                     fclose(fid);
                 }
             }
-            //printf("Elapsed: %f\n", now() - t0);
-            t0 = now();
-            //printf("Subsamples: %d\n", subsamples);
-            subsamples = 0;
-            //printf("Quaternion\n");
-            //for (int j=0; j<4; j++) {
-            //    printf("%f ", quaternion[j]);
-            //}
-            //printf("\n");
-            //double accTime = now();
-            //mpu9250.readAcceleration(acceleration);
             mpu9250.readAccelerationAndRotationRate(acceleration, rotationRate);
-            //printf("Read accelerometer takes: %f\n", now() - accTime);
-            //double gyroTime = now();
-            //mpu9250.readRotationRate(rotationRate);
-            //printf("Read gyroscope takes: %f\n", now() - gyroTime);
-            //double magTime = now();
-            mpu9250.readMagneticField(magneticField);
-            //printf("Read magnetometer takes: %f\n", now() - magTime);
-            for(int i=0; i<3; i++) {
-                magneticField[i] *= sensitivity[i];
+            if(mpu9250.magnetometerReady()){
+                mpu9250.readMagneticField(magneticField);
+                for(int i=0; i<3; i++) {
+                    magneticField[i] *= magnetometerSensitivity[i];
+                }
             }
             sample++;
-            if (sample > 1000) {
+            if (sample > 100) {
                 break;
             }
         }
         double deltat = now() - lastUpdate;
-        //printf("Delta t: %f\n", deltat);
         lastUpdate = now();
-        //double t0 = now();
-        //for (int i=0; i<50; i++) {
         if(sample > 1){
-            if(!MadgwickQuaternionUpdate(quaternion, acceleration, rotationRate, magneticField, deltat)) {
+            if(!madgwickQuaternionUpdate(quaternion, acceleration, rotationRate, magneticField, deltat)) {
                 printf("Madgwick failed!\n");
             }
-        subsamples++;
         }
-        //}
-        //printf("Madgwick time: %f\n", now() - t0);
-        //mpu9250.wait(1000000);
-        //printf("Acceleration\n");
-        //for (int j=0; j<3; j++) {
-        //    printf("%f ", acceleration[j]);
-        //}
-        //printf("\n");
-        //printf("Rotation Rate\n");
-        //for (int j=0; j<3; j++) {
-        //    printf("%f ", rotationRate[j]);
-        //}
-        //printf("\n");
-        //printf("Magnetic Field\n");
-        //for (int j=0; j<3; j++) {
-        //    printf("%f ", magneticField[j]);
-        //}
-        //printf("\n");
     }
-    printf("Quaternion\n");
-    for (int j=0; j<4; j++) {
-        printf("%f ", quaternion[j]);
-    }
-    printf("\n");
     return 0;
 }

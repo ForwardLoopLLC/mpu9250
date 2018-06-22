@@ -92,43 +92,205 @@ enum class AK8963_CNTL_MODE {
 };
 #define AK8963_ASAX 0x10
 
+//! test
 class MPU9250 {
     public:
+        //! Constructor initializes I2C resources
+        /*!
+            \param bus the I2C bus to which the MPU9250 sensor is connected 
+        */
         MPU9250(const uint8_t bus);
+        //! Destructor cleans up I2C resources
         ~MPU9250();
+        //! Pause main thread execution
+        /*!
+            \param delay time in milliseconds to pause 
+        */
         void wait(const int delay);
+        //! Check if there was an error during object construction
+        /*!
+            \return True, if constructor failed. False, if succeeded.
+        */ 
         bool error();
+        //! Reset all registers
+        /*!
+            \return False, if reset failed. True, if succeeded.
+        */
         bool reset();
+        //! Disable sensor sleep mode 
+        /*!
+            \return False, if disable failed. True, if succeeded.
+        */
         bool disableSleepMode();
+        //! Enable sensor sleep mode 
+        /*!
+            \return False, if enable failed. True, if succeeded.
+        */
         bool enableSleepMode();
+        //! Use internal 20MHz clock 
+        /*!
+            \return False, if enable failed. True, if succeeded.
+        */
         bool useInternalClock();
+        //! If available, use phase-locked loop (PLL) clock. Otherwise, use internal 20MHz clock
+        /*!
+            \return False, if enable failed. True, if succeeded.
+        */
         bool useBestClock();
+        //! Set gyroscope low-pass maximum delay to 4.9 milliseconds, which corresponds to a maximum sample rate of roughly 200Hz 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setGyroscopeLowPassFilterFrequency200Hz();
+        //! Set sample frequency to 10Hz. If called with `enableDataReady()`, this causes `dataReady()` to return true roughly 10 times per second 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerGyroscopeSampleFrequency10Hz();
+        //! Set sample frequency to 50Hz. If called with `enableDataReady()`, this causes `dataReady()` to return true roughly 50 times per second 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerGyroscopeSampleFrequency50Hz();
+        //! Set sample frequency to 100Hz. If called with `enableDataReady()`, this causes `dataReady()` to return true roughly 100 times per second 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerGyroscopeSampleFrequency100Hz();
+        //! Set sample frequency to 200Hz. If called with `enableDataReady()`, this causes `dataReady()` to return true roughly 200 times per second 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerGyroscopeSampleFrequency200Hz();
+        //! Set gyroscope maximum scale to ±250°/s 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setGyroscopeScale250DPS();
+        //! Set gyroscope maximum scale to ±500°/s 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setGyroscopeScale500DPS();
+        //! Set gyroscope maximum scale to ±1000°/s 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setGyroscopeScale1000DPS();
+        //! Set gyroscope maximum scale to ±2000°/s 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setGyroscopeScale2000DPS();
+        //! Set accelerometer maximum scale to ±2g
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerScale2G();
+        //! Set accelerometer maximum scale to ±4g
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerScale4G();
+        //! Set accelerometer maximum scale to ±8g 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerScale8G();
+        //! Set accelerometer maximum scale to ±16g 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerScale16G();
+        //! Set accelerometer bandwidth to 44.8Hz
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setAccelerometerBandwidth45Hz();
+        //! Turn on AK8963 magnetometer so it is accessible from the I2C bus.
+        /*!
+            \return False, if enable failed. True, if succeeded.
+        */
         bool enableMagnetometer();
+        //! Make MPU9250 and AK8963 act as slave, not master
+        /*!
+            \return False, if enable failed. True, if succeeded.
+        */
         bool becomeSlave();
+        //! Enable interrupt that signals when new data is available. This causes `dataReady()` to return true at the accelerometer and gyroscope sample frequency 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool enableDataReady();
+        //! Signal that new accelerometer and gyroscope data is available
+        /*!
+            \return True, if data available. False, if data is stale. 
+        */
         bool dataReady();
-        bool testReadWord();
+        //! Signal that new magnetometer data is available
+        /*!
+            \return True, if data available. False, if data is stale. 
+        */
         bool magnetometerReady();
+        //! Read factory calibration for magnetometer sensitivity
+        /*!
+            \param sensitivity magnetometer sensitivity in the x, y, and z directions.
+            \return True, if `sensitivity` contains the magnetometer sensitivity values. False, if `sensitivity` contains meaningless data. 
+        */
         bool magnetometerSensitivity(double sensitivity[3]);
+        //! Set magnetometer scale to 14 bits of accuracy 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setMagnetometerScale14Bits();
+        //! Set magnetometer scale to 16 bits of accuracy 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
+        bool setMagnetometerScale16Bits();
+        //! Set magnetometer output data rate to 8Hz 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
+        bool setMagnetometerSampleRate8Hz();
+        //! Set magnetometer output data rate to 100Hz 
+        /*!
+            \return False, if set failed. True, if succeeded.
+        */
         bool setMagnetometerSampleRate100Hz();
+        //! Read acceleration values into an array. 
+        /*! This will read the accelerometer data even if it is stale. Always check `dataReady()` to ensure data is up-to-date and accurate.
+
+            This method only reads the accelerometer data. For applications that need acceleration and rotation rate values, consider using the faster `readAccelerationAndRotationRate()` method.
+
+            \param acceleration array to hold acceleration in the x, y, and z directions in units of gravitational acceleration.
+            \return False, if read failed. True, if succeeded.
+        */
         bool readAcceleration(double acceleration[3]);
+        //! Read rotation rate values into an array. 
+        /*! This will read the gyroscope data even if it is stale. Always check `dataReady()` to ensure data is up-to-date and accurate.
+
+            This method only reads the gyroscope data. For applications that need acceleration and rotation rate values, consider using the faster `readAccelerationAndRotationRate()` method.
+
+            \param rotationRate array to hold rotation rate in the x, y, and z directions in units of °/s
+            \return False, if read failed. True, if succeeded.
+        */
         bool readRotationRate(double rotationRate[3]);
+        //! Read acceleration and rotation rate values into arrays. 
+        /*! This will read the accelerometer and gyroscope data even if it is stale. Always check `dataReady()` to ensure data is up-to-date and accurate.
+
+            For applications that need acceleration and rotation rate values, this method is faster than calling `readAcceleration()` and `readRotationRate()` one after the other. 
+
+            \param acceleration array to hold acceleration in the x, y, and z directions in units of gravitational acceleration.
+            \param rotationRate array to hold rotation rate in the x, y, and z directions in units of °/s
+            \return False, if read failed. True, if succeeded.
+        */
 		bool readAccelerationAndRotationRate(double acceleration[3], double rotationRate[3]);
+        //! Read magnetic field values into an array. 
+        /*! This will read the magnetometer data even if it is stale. Always check `magnetometerReady()` to ensure data is up-to-date and accurate.
+            \param magneticField array to hold magnetic field in the x, y, and z directions in units of milliGauss 
+            \return False, if read failed. True, if succeeded.
+        */
         bool readMagneticField(double magneticField[3]);
     private:
         I2C mpu9250I2C;
@@ -261,7 +423,6 @@ bool MPU9250::setGyroscopeScale(const uint8_t scale) {
         return false;
     }
     gyroscopeResolution = 250.0*(scale+1)/32768.0;
-    printf("Gyro res: %f\n", gyroscopeResolution);
     return true;
 } 
 
@@ -352,12 +513,6 @@ bool MPU9250::enableDataReady() {
 
 bool MPU9250::dataReady() {
     return mpu9250I2C.read_byte(MPU9250_INT_STATUS) & 0x01;
-}
-
-bool MPU9250::testReadWord() {
-	uint8_t tmp[14];
-	mpu9250I2C.read_block(MPU9250_ACCEL_XOUT_H, 14, tmp);
-    return true; 
 }
 
 bool MPU9250::enableMagnetometer() {
@@ -472,9 +627,6 @@ bool MPU9250::readAccelerationAndRotationRate(double acceleration[3], double rot
 }
 
 bool MPU9250::readMagneticField(double magneticField[3]) {
-	if (!magnetometerReady()) {
-		return false;
-	}
     uint8_t magData[6];
     readMagnetometerBytes(AK8963_XOUT_L, 6, magData);
     for (int i=0; i<3; i++) {
@@ -485,97 +637,6 @@ bool MPU9250::readMagneticField(double magneticField[3]) {
 
 bool MPU9250::magnetometerReady() {
 	return ak8963I2C->read_byte(AK8963_ST1) & 0x01;
-}
-#define PI 3.14159265358979323846
-bool MadgwickQuaternionUpdate(
-	double quaternion[4],
-	double acceleration[3],
-	double rotationRate[3],
-	double magneticField[3],
-	double deltat)
-{
-	double beta = 2.5;//sqrt(0.75)*PI/3.0;
-	double q1 = quaternion[0], q2 = quaternion[1], q3 = quaternion[2], q4 = quaternion[3];
-	double ax = acceleration[0], ay = acceleration[1], az = acceleration[2];
-	double gx = (PI/180.0)*rotationRate[0], gy = (PI/180.0)*rotationRate[1], gz = (PI/180.0)*rotationRate[2];
-	double mx = magneticField[0], my = magneticField[1], mz = magneticField[2];
-
-	double _2q1 = 2.0 * q1;
-	double _2q2 = 2.0 * q2;
-	double _2q3 = 2.0 * q3;
-	double _2q4 = 2.0 * q4;
-	double _2q1q3 = 2.0 * q1 * q3;
-	double _2q3q4 = 2.0 * q3 * q4;
-	double q1q1 = q1 * q1;
-	double q1q2 = q1 * q2;
-	double q1q3 = q1 * q3;
-	double q1q4 = q1 * q4;
-	double q2q2 = q2 * q2;
-	double q2q3 = q2 * q3;
-	double q2q4 = q2 * q4;
-	double q3q3 = q3 * q3;
-	double q3q4 = q3 * q4;
-	double q4q4 = q4 * q4;
-
-	double norm = sqrt(ax * ax + ay * ay + az * az);
-	if (abs(norm) < 1e-6) {
-		return false;
-	}
-	norm = 1.0/norm;
-	ax *= norm;
-	ay *= norm;
-	az *= norm;
-
-	norm = sqrt(mx * mx + my * my + mz * mz);
-	if (abs(norm) < 1e-6) {
-		return false;
-	}
-	norm = 1.0/norm;
-	mx *= norm;
-	my *= norm;
-	mz *= norm;
-
-	double _2q1mx = 2.0 * q1 * mx;
-	double _2q1my = 2.0 * q1 * my;
-	double _2q1mz = 2.0 * q1 * mz;
-	double _2q2mx = 2.0 * q2 * mx;
-	double hx = mx * q1q1 - _2q1my * q4 + _2q1mz * q3 + mx * q2q2 + _2q2 * my * q3 + _2q2 * mz * q4 - mx * q3q3 - mx * q4q4;
-	double hy = _2q1mx * q4 + my * q1q1 - _2q1mz * q2 + _2q2mx * q3 - my * q2q2 + my * q3q3 + _2q3 * mz * q4 - my * q4q4;
-	double _2bx = sqrt(hx * hx + hy * hy);
-	double _2bz = -_2q1mx * q3 + _2q1my * q2 + mz * q1q1 + _2q2mx * q4 - mz * q2q2 + _2q3 * my * q4 - mz * q3q3 + mz * q4q4;
-	double _4bx = 2.0f * _2bx;
-	double _4bz = 2.0f * _2bz;
-
-	double s1 = -_2q3 * (2.0 * q2q4 - _2q1q3 - ax) + _2q2 * (2.0 * q1q2 + _2q3q4 - ay) - _2bz * q3 * (_2bx * (0.5 - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q4 + _2bz * q2) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q3 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5 - q2q2 - q3q3) - mz);
-	double s2 = _2q4 * (2.0 * q2q4 - _2q1q3 - ax) + _2q1 * (2.0 * q1q2 + _2q3q4 - ay) - 4.0 * q2 * (1.0 - 2.0 * q2q2 - 2.0 * q3q3 - az) + _2bz * q4 * (_2bx * (0.5 - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q3 + _2bz * q1) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q4 - _4bz * q2) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5 - q2q2 - q3q3) - mz);
-	double s3 = -_2q1 * (2.0 * q2q4 - _2q1q3 - ax) + _2q4 * (2.0 * q1q2 + _2q3q4 - ay) - 4.0 * q3 * (1.0 - 2.0 * q2q2 - 2.0 * q3q3 - az) + (-_4bx * q3 - _2bz * q1) * (_2bx * (0.5 - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (_2bx * q2 + _2bz * q4) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + (_2bx * q1 - _4bz * q3) * (_2bx * (q1q3 + q2q4) + _2bz * (0.5 - q2q2 - q3q3) - mz);
-	double s4 = _2q2 * (2.0 * q2q4 - _2q1q3 - ax) + _2q3 * (2.0 * q1q2 + _2q3q4 - ay) + (-_4bx * q4 + _2bz * q2) * (_2bx * (0.5 - q3q3 - q4q4) + _2bz * (q2q4 - q1q3) - mx) + (-_2bx * q1 + _2bz * q3) * (_2bx * (q2q3 - q1q4) + _2bz * (q1q2 + q3q4) - my) + _2bx * q2 * (_2bx * (q1q3 + q2q4) + _2bz * (0.5 - q2q2 - q3q3) - mz);
-	norm = sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4); 
-	norm = 1.0/norm;
-	s1 *= norm;
-	s2 *= norm;
-	s3 *= norm;
-	s4 *= norm;
-
-	double qDot1 = 0.5 * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1;
-	double qDot2 = 0.5 * (q1 * gx + q3 * gz - q4 * gy) - beta * s2;
-	double qDot3 = 0.5 * (q1 * gy - q2 * gz + q4 * gx) - beta * s3;
-	double qDot4 = 0.5 * (q1 * gz + q2 * gy - q3 * gx) - beta * s4;
-
-	q1 += qDot1 * deltat;
-	q2 += qDot2 * deltat;
-	q3 += qDot3 * deltat;
-	q4 += qDot4 * deltat;
-	norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4); 
-	if (abs(norm) < 1e-6) {
-		return false;
-	}
-	norm = 1.0/norm;
-	quaternion[0] = q1 * norm;
-	quaternion[1] = q2 * norm;
-	quaternion[2] = q3 * norm;
-	quaternion[3] = q4 * norm;
-	return true;
 }
 
 #endif
