@@ -110,7 +110,7 @@ Related Documentation
 :doc:`cpp/api`
     Driver interface for MLX90614
 
-`Source Code <https://github.com/ForwardLoopLLc/mlx90614>`_
+`Source Code <https://github.com/ForwardLoopLLc/mpu9250>`_
     Our MIT license lets you use, change, and sell the drivers for free
  
 `Forward Loop Docs <https://docs.forward-loop.com>`_
