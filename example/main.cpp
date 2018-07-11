@@ -1,5 +1,5 @@
-#include "mpu9250/mpu9250.h"
-#include "mpu9250/quaternion.h"
+#include "mpu9250/mpu9250.h" // drivers
+#include "mpu9250/quaternion.h" //madgwickQuaternionUpdate
 #include <sys/time.h>
 
 double now() {
@@ -66,6 +66,10 @@ int main() {
     int sample = 0;
     while(true) {
         if(mpu9250.dataReady()) {
+            // collect data samples and compute Madgwick quaternions while
+            // waiting for new data to become available
+            // (more iterations == more accurate orientation)
+            // write and overwrite data to a file
             if(sample > 1) {
                 FILE* fid = fopen("/floop/quaternion", "w");
                 if (fid != NULL) {
@@ -79,6 +83,7 @@ int main() {
                     fclose(fid);
                 }
             }
+            // read data
             mpu9250.readAccelerationAndRotationRate(acceleration, rotationRate);
             if(mpu9250.magnetometerReady()){
                 mpu9250.readMagneticField(magneticField);
@@ -93,7 +98,9 @@ int main() {
         }
         double deltat = now() - lastUpdate;
         lastUpdate = now();
+        // calculate most accurate quaternion while waiting for new data
         if(sample > 1){
+            // gets about ~2000 iterations per data read on a Forward Loop Zero
             if(!madgwickQuaternionUpdate(quaternion, acceleration, rotationRate, magneticField, deltat)) {
                 printf("Madgwick failed!\n");
             }

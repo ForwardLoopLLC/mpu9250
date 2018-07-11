@@ -33,7 +33,6 @@ version = ''
 
 autodoc_default_flags = ['members', 'private-members']
 coverage_skip_undoc_in_source = True
-# universal setting
 html_logo = './logo.png'
 html_theme_options = {
         'show_powered_by' : False,

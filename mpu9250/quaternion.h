@@ -1,5 +1,12 @@
 #define PI 3.14159265358979323846
-
+//! Compute the latest quaternion values for known inertial measurements
+/*!
+    \param quaternion array of quaternion values
+    \param acceleration array of x, y, z accelerations in units of g
+    \param rotationRate array of x, y, z rotation rates in degrees per second
+    \param magneticField array of x, y, z magnetic fields in milligauss
+    \param deltat time since last update in units of seconds
+ */
 bool madgwickQuaternionUpdate(
 	double quaternion[4],
 	double acceleration[3],

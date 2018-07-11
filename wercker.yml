@@ -1,0 +1,23 @@
+box:
+    id: python:3.6
+
+build:
+    steps:
+        - install-packages:
+            packages: doxygen
+        - pip-install:
+            requirements_file: ""
+            packages_list: "sphinx breathe sphinx-tabs awscli"
+        - script:
+            name: build documentation
+            code: |
+                ./doc.sh && \
+                mkdir -p sync/drivers/$WERCKER_GIT_REPOSITORY/ && \
+                cp -r docs/build/html/ sync/drivers/$WERCKER_GIT_REPOSITORY/$WERCKER_GIT_BRANCH/ && \
+                ls sync/drivers/$WERCKER_GIT_REPOSITORY/$WERCKER_GIT_BRANCH/
+        - script:
+            name: push documentation
+            code: |
+                aws configure set aws_access_key_id $AWS_KEY_ID && \
+                aws configure set aws_secret_access_key $AWS_SECRET_KEY && \
+                aws s3 sync sync/ s3://docs.forward-loop.com
